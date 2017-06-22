@@ -139,18 +139,6 @@ class matrix:
 
 ########################################
 
-# Implement the filter function below
-
-def kalman_filter(x, P):
-    for n in range(len(measurements)):
-
-    # measurement update
-
-    # prediction
-
-    return x, P
-
-
 ############################################
 ### use the code below to test your filter!
 ############################################
@@ -164,6 +152,26 @@ F = matrix([[1., 1.], [0, 1.]])  # next state function
 H = matrix([[1., 0.]])  # measurement function
 R = matrix([[1.]])  # measurement uncertainty
 I = matrix([[1., 0.], [0., 1.]])  # identity matrix
+
+
+# Implement the filter function below
+
+def kalman_filter(x, P):
+    for n in range(len(measurements)):
+        # prediction
+        x = (F * x) + u
+        P = F * P * F.transpose()
+
+        # measurement update
+        Z = matrix([measurements[n]])
+        y = Z.transpose() - (H * x)
+        S = H * P * H.transpose() + R
+        K = P * H.transpose() * S.inverse()
+        x = x + (K * y)
+        P = (I - (K * H)) * P
+
+    print(x, P)
+    return x, P
 
 print(kalman_filter(x, P))
 # output should be:
