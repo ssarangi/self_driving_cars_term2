@@ -70,25 +70,25 @@ int main() {
 
 
 	//design the KF with 1D motion
-	x = VectorXd(2);
+	x = VectorXd(2); // initial state (location and velocity)
 	x << 0, 0;
 
-	P = MatrixXd(2, 2);
+	P = MatrixXd(2, 2); // initial uncertainty
 	P << 1000, 0, 0, 1000;
 
-	u = VectorXd(2);
+	u = VectorXd(2); // external motion
 	u << 0, 0;
 
-	F = MatrixXd(2, 2);
+	F = MatrixXd(2, 2); // next state function
 	F << 1, 1, 0, 1;
 
-	H = MatrixXd(1, 2);
+	H = MatrixXd(1, 2); // measurement function
 	H << 1, 0;
 
-	R = MatrixXd(1, 1);
+	R = MatrixXd(1, 1); // measurement uncertainty
 	R << 1;
 
-	I = MatrixXd::Identity(2, 2);
+	I = MatrixXd::Identity(2, 2); // Identity Matrix
 
 	Q = MatrixXd(2, 2);
 	Q << 0, 0, 0, 0;
@@ -118,14 +118,23 @@ void filter(VectorXd &x, MatrixXd &P) {
 		//YOUR CODE HERE
 		
 		// KF Measurement update step
+		VectorXd y = z - H * x;
+		MatrixXd Ht = H.transpose();
+		MatrixXd S = H * P * Ht + R;
+		MatrixXd Si = S.inverse();
+		MatrixXd K = P * Ht * Si;    // Kalman Gain
 		 
 		// new state
+		x = x + (K * y);
+		P = (I - K * H) * P;
+		
 		
 		// KF Prediction step
+		x = F * x + u;
+		MatrixXd Ft = F.transpose();
+		P = F * P * Ft + Q;
 		
 		std::cout << "x=" << std::endl <<  x << std::endl;
 		std::cout << "P=" << std::endl <<  P << std::endl;
-
-
 	}
 }
