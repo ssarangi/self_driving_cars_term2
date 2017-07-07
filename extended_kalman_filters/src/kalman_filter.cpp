@@ -31,7 +31,6 @@ void KalmanFilter::Predict() {
   x_ = F_ * x_;
   MatrixXd Ft = F_.transpose();
   P_ = F_ * P_ * Ft + Q_;
-  std::cout << "X: " << x_ << " <---------> P: " << P_ << std::endl;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
@@ -39,9 +38,7 @@ void KalmanFilter::Update(const VectorXd &z) {
   P_ = UpdateCommon(H_, P_, R_laser, y);
 }
 
-void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  std::cout << "Z: " << z << std::endl;
-  Tools tools;
+void KalmanFilter::UpdateEKF(const Tools& tools, const VectorXd &z) {
   MatrixXd Hj = tools.CalculateJacobian(x_);
 
   double px = x_(0);
@@ -63,10 +60,8 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   h << rho, phi, rho_dot;
 
   VectorXd y = z - h;
-  std::cout << "\n\n Phi = " << y(1) << std::endl;
 
   y(1) = NormalizeAngle(y(1));
-  std::cout << "\n\n Phi = " << y(1) << std::endl;
   P_ = UpdateCommon(Hj, P_, R_radar, y);
 }
 
