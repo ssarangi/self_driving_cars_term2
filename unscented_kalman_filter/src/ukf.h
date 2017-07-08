@@ -58,6 +58,16 @@ public:
   ///* Weights of sigma points
   VectorXd weights_;
 
+  ///* the current NIS for radar
+  double NIS_radar_;
+
+  ///* the current NIS for laser
+  double NIS_laser_;
+
+  int n_z_lidar_;
+
+  int n_z_radar_;
+
   ///* State dimension
   int n_x_;
 
@@ -66,6 +76,8 @@ public:
 
   ///* Sigma point spreading parameter
   double lambda_;
+
+  long previous_timestamp_;
 
 
   /**
@@ -83,6 +95,10 @@ public:
    * @param meas_package The latest measurement data of either radar or laser
    */
   void ProcessMeasurement(MeasurementPackage meas_package);
+
+  MatrixXd GenerateSigmaPoints(const VectorXd x, const MatrixXd P);
+
+  MatrixXd PredictSigmaPoints(const MatrixXd& Xsig_aug, const double delta_t);
 
   /**
    * Prediction Predicts sigma points, the state, and the state covariance
