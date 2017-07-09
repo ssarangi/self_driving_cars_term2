@@ -25,16 +25,16 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 0.2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 0.6;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
 
   // Laser measurement noise standard deviation position2 in m
-  std_laspy_ = 0.15;
+  std_laspy_ = 0.08;
 
   // Radar measurement noise standard deviation radius in m
   std_radr_ = 0.3;
@@ -49,7 +49,13 @@ UKF::UKF() {
 
   n_aug_ = 7;
 
+  n_z_lidar_ = 2;
+
+  n_z_radar_ = 3;
+
   lambda_ = 3 - n_aug_;
+
+  is_initialized_ = false;
 }
 
 UKF::~UKF() {}
@@ -65,8 +71,8 @@ MatrixXd UKF::GenerateSigmaPoints(const VectorXd x, const MatrixXd P) {
   MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
 
   x_aug.head(5) = x;
+  x_aug(5) = 0;
   x_aug(6) = 0;
-  x_aug(7) = 0;
 
   // Create the Augmented Covariance Matrix
   P_aug.fill(0.0);
@@ -141,17 +147,17 @@ MatrixXd UKF::PredictSigmaPoints(const MatrixXd& Xsig_aug, const double delta_t)
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   // Check if the filter has been initialized or not
-  if (is_initialized_) {
+  if (!is_initialized_) {
     std::cout << "Unscented Kalman Initialization" << std::endl;
     // Initialize the state
     x_ << 1, 1, 1, 1, 1;
 
-    // Initialize the State Covariance Matrix. Use the values from the lesson.
-    P_ << 0.0043, -0.0013, 0.0030, -0.0022, -0.0020,
-         -0.0013,  0.0077, 0.0011,  0.0071,  0.0060,
-          0.0030,  0.0011, 0.0054,  0.0007,  0.0008,
-         -0.0022,  0.0071, 0.0007,  0.0098,  0.0100,
-         -0.0020,  0.0060, 0.0008,  0.0100,  0.0123;
+    // Initialize the State Covariance Matrix.
+    P_ << 1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0,
+          0, 0, 0, 0, 1;
 
     weights_ = VectorXd(2 * n_aug_ + 1);
     weights_.fill(1/(2*(lambda_ + n_aug_)));
@@ -199,14 +205,12 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   double delta_t = (meas_package.timestamp_ - previous_timestamp_) / 1000000.0;
   previous_timestamp_ = meas_package.timestamp_;
 
-  if (meas_package.sensor_type_ == MeasurementPackage::SensorType::LASER) {
+  if (meas_package.sensor_type_ == MeasurementPackage::SensorType::LASER && use_laser_) {
     Prediction(delta_t);
     UpdateLidar(meas_package);
-  } else if (meas_package.sensor_type_ == MeasurementPackage::SensorType::RADAR) {
+  } else if (meas_package.sensor_type_ == MeasurementPackage::SensorType::RADAR && use_radar_) {
     Prediction(delta_t);
     UpdateRadar(meas_package);
-  } else {
-    throw std::runtime_error("Invalid Sensor type encountered");
   }
 }
 
@@ -282,7 +286,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   // Measurement noise covariance matrix
   MatrixXd R = MatrixXd(n_z_lidar_, n_z_lidar_);
   R << std_laspx_ * std_laspx_, 0,
-       0, std_laspx_ * std_laspx_;
+       0, std_laspy_ * std_laspy_;
   S = S + R;
 
   MatrixXd Tc = MatrixXd(n_x_, n_z_lidar_);
