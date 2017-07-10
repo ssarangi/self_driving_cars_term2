@@ -114,6 +114,9 @@ public:
 	const bool initialized() const {
 		return is_initialized;
 	}
+
+private:
+    std::vector<LandmarkObs> transformObservations(const Particle& particle, const std::vector<LandmarkObs>& observations);
 };
 
 
