@@ -25,7 +25,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     // Add random Gaussian noise to each particle.
     // NOTE: Consult particle_filter.h for more information about this method (and others in this file).
     default_random_engine gen;
-    num_particles = 100000;
+    num_particles = 101;
 
     normal_distribution<double> dist_x(x, std[0]);
     normal_distribution<double> dist_y(y, std[1]);
@@ -100,7 +100,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
-        vector<LandmarkObs> observations, Map map_landmarks) {
+                                   vector<LandmarkObs> observations, Map map_landmarks) {
     // TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
     //   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
     // NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
@@ -117,16 +117,16 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
         // For each landmark
         for (auto landmark : map_landmarks.landmark_list) {
-            if (fabs(particle.x - landmark.x) <= sensor_range && fabs(particle.y - landmark.y)) {
+            if (fabs(particle.x - landmark.x_f) <= sensor_range && fabs(particle.y - landmark.y_f)) {
                 // Add the prediction to the vector
-                predictions.push_back(landmark);
+                predictions.push_back(LandmarkObs {landmark.id_i, landmark.x_f, landmark.y_f});
             }
         }
 
         vector<LandmarkObs> transformed_observations = transformObservations(particle, observations);
 
         // Associate the data with the landmark
-        dataAssociation(predicted, transformed_observations);
+        dataAssociation(predictions, transformed_observations);
 
         particle.weight = 1.0;
 
@@ -154,6 +154,7 @@ void ParticleFilter::resample() {
     // TODO: Resample particles with replacement with probability proportional to their weight.
     // NOTE: You may find std::discrete_distribution helpful here.
     //   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+    default_random_engine gen;
     vector<Particle> new_particles;
 
     vector<double> weights;
