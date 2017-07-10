@@ -87,12 +87,12 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
     //   observed measurement to this particular landmark.
     // NOTE: this method will NOT be called by the grading code. But you will probably find it useful to
     //   implement this method and use it as a helper during the updateWeights phase.
-    for (auto predicted_landmark : predicted) {
+    for (auto obs : observations) {
         double min_distance = std::numeric_limits<double>::max();
-        for (auto obs : observations) {
+        for (auto predicted_landmark : predicted) {
             double distance = dist(predicted_landmark.x, predicted_landmark.y, obs.x, obs.y);
             if (distance < min_distance) {
-                predicted_landmark.id = obs.id;
+                obs.id = predicted_landmark.id;
                 min_distance = distance;
             }
         }
@@ -133,11 +133,13 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         for (auto current_observation : transformed_observations) {
             int associated_prediction = current_observation.id;
             double pr_x, pr_y;
+            int prediction_id;
 
             for (auto prediction : predictions) {
                 if (prediction.id == associated_prediction) {
                     pr_x = prediction.x;
                     pr_y = prediction.y;
+                    prediction_id = prediction.id;
                 }
             }
 
@@ -145,8 +147,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             double s_x = std_landmark[0];
             double s_y = std_landmark[1];
             double obs_w = ( 1/(2*M_PI*s_x*s_y)) * exp(-( pow(pr_x-current_observation.x, 2)/(2*pow(s_x, 2)) + (pow(pr_y-current_observation.y,2)/(2*pow(s_y, 2))) ) );
+            cout << prediction_id << std::endl;
             particle.weight *= obs_w;
         }
+
+        // cout << particle.weight << endl;
     }
 }
 
