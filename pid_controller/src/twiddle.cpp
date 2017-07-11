@@ -77,7 +77,9 @@ void Twiddle::updatePID() {
  */
 
 TWIDDLE_STEP Twiddle::step(double err) {
-  ++count;
+  
+
+
   if (m_twiddleStep == TWIDDLE_STEP::START_TWIDDLE) {
     m_p[m_currentParameterBeingTuned] += m_dp[m_currentParameterBeingTuned];
     updatePID();

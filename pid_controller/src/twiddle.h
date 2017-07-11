@@ -15,7 +15,7 @@ enum TWIDDLE_STEP {
 
 class Twiddle {
 public:
-    Twiddle(double tol) {
+    Twiddle(double tol, int num_iterations) {
       int num_params = 3;  /// For now hardcode it to 3 since we need to update PID controller
       m_tolerance = tol;
       m_bestErr = 0.0;
@@ -26,7 +26,8 @@ public:
       m_currentParameterBeingTuned = 0;
       m_pPID = new PID();
       m_bestErr = std::numeric_limits<double>::max();
-      count = 0;
+      m_numIterations = num_iterations;
+      m_currentIteration = 0;
     }
 
     ~Twiddle() {
@@ -58,7 +59,8 @@ private:
     TWIDDLE_STEP m_twiddleStep;
     int m_currentParameterBeingTuned;
     PID *m_pPID;
-    int count;
+    int m_numIterations;
+    int m_currentIteration;
 };
 
 #endif
