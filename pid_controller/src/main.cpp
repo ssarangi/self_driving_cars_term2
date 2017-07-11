@@ -61,7 +61,7 @@ int main()
   bool use_twiddle = true;
   Twiddle *pTwiddle = nullptr;
   if (use_twiddle)
-    pTwiddle = new Twiddle(0.2);
+    pTwiddle = new Twiddle(0.2, 500);
 
   h.onMessage([&steering_pid, &speed_pid, set_speed, pTwiddle, use_twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -80,7 +80,7 @@ int main()
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
           /*
-          * TODO: Calcuate steering value here, remember the steering value is
+          * TODO: Calculate steering value here, remember the steering value is
           * [-1, 1].
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
@@ -92,26 +92,30 @@ int main()
             std::vector<double> dp = pTwiddle->getDP();
             std::vector<double> p = pTwiddle->getP();
 
-            std::cout << "P: ";
-            std::copy(p.begin(), p.end(), std::ostream_iterator<double>(std::cout, ", "));
-            std::cout << std::endl;
-
-            std::cout << "DP: ";
-            std::copy(dp.begin(), dp.end(), std::ostream_iterator<double>(std::cout, ", "));
-            std::cout << std::endl;
-
-            if (twiddle_step == TWIDDLE_STEP::RESET_SIMULATOR) {
-              reset_simulator(ws);
-              pTwiddle->step(cte);
-              std::vector<double> _dp = pTwiddle->getDP();
-              std::vector<double> _p = pTwiddle->getP();
+            if (twiddle_step != TWIDDLE_STEP::ACCUMULATE_ERROR) {
               std::cout << "P: ";
-              std::copy(_p.begin(), _p.end(), std::ostream_iterator<double>(std::cout, ", "));
+              std::copy(p.begin(), p.end(), std::ostream_iterator<double>(std::cout, ", "));
               std::cout << std::endl;
 
               std::cout << "DP: ";
-              std::copy(_dp.begin(), _dp.end(), std::ostream_iterator<double>(std::cout, ", "));
+              std::copy(dp.begin(), dp.end(), std::ostream_iterator<double>(std::cout, ", "));
               std::cout << std::endl;
+            }
+
+            if (twiddle_step == TWIDDLE_STEP::RESET_SIMULATOR) {
+              reset_simulator(ws);
+              twiddle_step = pTwiddle->step(cte);
+              if (twiddle_step == TWIDDLE_STEP::ACCUMULATE_ERROR) {
+                std::vector<double> _dp = pTwiddle->getDP();
+                std::vector<double> _p = pTwiddle->getP();
+                std::cout << "P: ";
+                std::copy(_p.begin(), _p.end(), std::ostream_iterator<double>(std::cout, ", "));
+                std::cout << std::endl;
+
+                std::cout << "DP: ";
+                std::copy(_dp.begin(), _dp.end(), std::ostream_iterator<double>(std::cout, ", "));
+                std::cout << std::endl;
+              }
             }
 
             // Get the PID and use that

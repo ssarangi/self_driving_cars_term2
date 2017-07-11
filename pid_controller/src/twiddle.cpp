@@ -77,17 +77,24 @@ void Twiddle::updatePID() {
  */
 
 TWIDDLE_STEP Twiddle::step(double err) {
-  
+  if (m_currentIteration < m_numIterations) {
+    std::cout << "Accumulating Error Iteration #" << m_currentIteration << std::endl;
+    m_error += err * err;
+    m_currentIteration += 1;
+    return TWIDDLE_STEP::ACCUMULATE_ERROR;
+  }
 
+  double avgError = m_error / m_numIterations;
 
   if (m_twiddleStep == TWIDDLE_STEP::START_TWIDDLE) {
     m_p[m_currentParameterBeingTuned] += m_dp[m_currentParameterBeingTuned];
     updatePID();
     m_twiddleStep = TWIDDLE_STEP::FIRST_IF_STEP;
+    m_currentIteration = 0;
     return m_twiddleStep;
   } else if (m_twiddleStep == TWIDDLE_STEP::FIRST_IF_STEP) {
-    if (err < m_bestErr) {
-      m_bestErr = err;
+    if (avgError < m_bestErr) {
+      m_bestErr = avgError;
       m_dp[m_currentParameterBeingTuned] *= 1.1;
       m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
       m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
@@ -96,11 +103,12 @@ TWIDDLE_STEP Twiddle::step(double err) {
       m_p[m_currentParameterBeingTuned] -= 2 * m_dp[m_currentParameterBeingTuned];
       updatePID();
       m_twiddleStep = TWIDDLE_STEP::AFTER_RESET_SIMULATOR;
+      m_currentIteration = 0;
       return TWIDDLE_STEP::RESET_SIMULATOR;
     }
   } else if (m_twiddleStep == TWIDDLE_STEP::AFTER_RESET_SIMULATOR) {
-    if (err < m_bestErr) {
-      m_bestErr = err;
+    if (avgError < m_bestErr) {
+      m_bestErr = avgError;
       m_dp[m_currentParameterBeingTuned] *= 1.05;
     } else {
       m_p[m_currentParameterBeingTuned] += m_dp[m_currentParameterBeingTuned];
@@ -110,6 +118,7 @@ TWIDDLE_STEP Twiddle::step(double err) {
 
     m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
     m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
+    m_currentIteration = 0;
   }
 
   return TWIDDLE_STEP::START_TWIDDLE;

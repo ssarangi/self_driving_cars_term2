@@ -7,6 +7,7 @@
 #include <limits>
 
 enum TWIDDLE_STEP {
+    ACCUMULATE_ERROR,
     START_TWIDDLE,
     FIRST_IF_STEP,
     RESET_SIMULATOR,
@@ -28,6 +29,7 @@ public:
       m_bestErr = std::numeric_limits<double>::max();
       m_numIterations = num_iterations;
       m_currentIteration = 0;
+      m_error = 0.0;
     }
 
     ~Twiddle() {
@@ -61,6 +63,7 @@ private:
     PID *m_pPID;
     int m_numIterations;
     int m_currentIteration;
+    double m_error;
 };
 
 #endif
