@@ -42,9 +42,12 @@ int main()
 
   PID steering_pid;
   double steering_Kp, steering_Ki, steering_Kd;
+//  steering_Kp = 0.1;
+//  steering_Ki = 0.0001;
+//  steering_Kd = 4.0;
   steering_Kp = 0.1;
-  steering_Ki = 0.0001;
   steering_Kd = 4.0;
+  steering_Ki = 0.0001;
 
   PID speed_pid;
   double speed_Kp, speed_Ki, speed_Kd;
@@ -79,6 +82,8 @@ int main()
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
+          TWIDDLE_STEP twiddle_step;
+          // std::cout << "CTE: " << cte << std::endl;
           /*
           * TODO: Calculate steering value here, remember the steering value is
           * [-1, 1].
@@ -87,8 +92,8 @@ int main()
           */
           // Run Twiddle. Once Twiddle converges then we can start running the simulator
           if (use_twiddle && pTwiddle->isActive()) {
-            std::cout << "Performing TWIDDLE step" << std::endl;
-            TWIDDLE_STEP twiddle_step = pTwiddle->step(cte);
+            // std::cout << "Performing TWIDDLE step" << std::endl;
+            twiddle_step = pTwiddle->step(cte);
             std::vector<double> dp = pTwiddle->getDP();
             std::vector<double> p = pTwiddle->getP();
 
@@ -129,6 +134,7 @@ int main()
             // Steering PID
             steering_pid.UpdateError(cte);
             steer_value = steering_pid.TotalError();
+            std::cout << "Average Error: " << cte << std::endl;
           }
 
           steer_value = std::max(std::min(1.0, steer_value), -1.0);
@@ -139,15 +145,17 @@ int main()
 //          double throttle = speed_pid.TotalError();
 //          throttle = std::max(std::min(1.0, steer_value), -1.0);
 
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
-
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+          // DEBUG
+          if (use_twiddle && pTwiddle->isActive() && twiddle_step != TWIDDLE_STEP::ACCUMULATE_ERROR) {
+            std::cout << msg << std::endl;
+            std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          }
         }
       } else {
         // Manual driving

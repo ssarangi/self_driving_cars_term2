@@ -118,7 +118,7 @@ def make_robot():
 
 
 # NOTE: We use params instead of tau_p, tau_d, tau_i
-def run(robot, params, n=100, speed=1.0):
+def run(robot, params, n=300, speed=1.0):
     x_trajectory = []
     y_trajectory = []
     err = 0

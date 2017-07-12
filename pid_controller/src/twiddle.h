@@ -7,11 +7,13 @@
 #include <limits>
 
 enum TWIDDLE_STEP {
+    INITIALIZE_TWIDDLE,
     ACCUMULATE_ERROR,
     START_TWIDDLE,
     FIRST_IF_STEP,
     RESET_SIMULATOR,
     AFTER_RESET_SIMULATOR,
+    END_TWIDDLE,
 };
 
 class Twiddle {
@@ -23,12 +25,12 @@ public:
       m_p = std::vector<double>(num_params, 0);
       m_dp = std::vector<double>(num_params, 1);
       m_isTwiddleActive = true;
-      m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
+      m_twiddleStep = TWIDDLE_STEP::INITIALIZE_TWIDDLE;
       m_currentParameterBeingTuned = 0;
       m_pPID = new PID();
       m_bestErr = std::numeric_limits<double>::max();
       m_numIterations = num_iterations;
-      m_currentIteration = 0;
+      m_currentIteration = -800;
       m_error = 0.0;
     }
 

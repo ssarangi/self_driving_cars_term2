@@ -8,9 +8,10 @@ using json = nlohmann::json;
 
 double Twiddle::sum_dp() {
   double sum = 0.0;
-  for (double d : m_dp) {
-    sum += d;
-  }
+//  for (double d : m_dp) {
+//    sum += d;
+//  }
+  sum = m_dp[0];
   return sum;
 }
 
@@ -39,8 +40,11 @@ std::vector<double> Twiddle::getP() {
 
 void Twiddle::updatePID() {
   m_pPID->Kp = m_p[0];
-  m_pPID->Kd = m_p[1];
-  m_pPID->Ki = m_p[2];
+  m_pPID->Kd = 4.0; // m_p[1];
+  m_pPID->Ki = 0.0001; // m_p[2];
+  m_pPID->p_error = 0.0;
+  m_pPID->d_error = 0.0;
+  m_pPID->i_error = 0.0;
 }
 
 /*
@@ -78,13 +82,25 @@ void Twiddle::updatePID() {
 
 TWIDDLE_STEP Twiddle::step(double err) {
   if (m_currentIteration < m_numIterations) {
-    std::cout << "Accumulating Error Iteration #" << m_currentIteration << std::endl;
+    // std::cout << "Accumulating Error Iteration #" << m_currentIteration << std::endl;
     m_error += err * err;
     m_currentIteration += 1;
     return TWIDDLE_STEP::ACCUMULATE_ERROR;
   }
 
   double avgError = m_error / m_numIterations;
+  std::cout << "Average Error: " << avgError << std::endl;
+  m_error = 0.0;
+
+  if (m_twiddleStep == TWIDDLE_STEP::INITIALIZE_TWIDDLE) {
+    m_bestErr = avgError;
+    bool is_active = isActive();
+    if (!is_active) {
+      return TWIDDLE_STEP::END_TWIDDLE;
+    }
+
+    m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
+  }
 
   if (m_twiddleStep == TWIDDLE_STEP::START_TWIDDLE) {
     m_p[m_currentParameterBeingTuned] += m_dp[m_currentParameterBeingTuned];
@@ -96,7 +112,8 @@ TWIDDLE_STEP Twiddle::step(double err) {
     if (avgError < m_bestErr) {
       m_bestErr = avgError;
       m_dp[m_currentParameterBeingTuned] *= 1.1;
-      m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
+      // m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
+      m_currentParameterBeingTuned = 0;
       m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
       return TWIDDLE_STEP::START_TWIDDLE;
     } else {
@@ -116,7 +133,8 @@ TWIDDLE_STEP Twiddle::step(double err) {
       m_dp[m_currentParameterBeingTuned] *= 0.9;
     }
 
-    m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
+    // m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
+    m_currentParameterBeingTuned = 0;
     m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
     m_currentIteration = 0;
   }
