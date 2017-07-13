@@ -45,9 +45,9 @@ int main()
 //  steering_Kp = 0.1;
 //  steering_Ki = 0.0001;
 //  steering_Kd = 4.0;
-  steering_Kp = 0.1;
-  steering_Kd = 4.0;
-  steering_Ki = 0.0001;
+  steering_Kd = 6.0;
+  steering_Kp = 0.01 * steering_Kd;
+  steering_Ki = 0.1 * steering_Kp;
 
   PID speed_pid;
   double speed_Kp, speed_Ki, speed_Kd;
@@ -64,7 +64,7 @@ int main()
   bool use_twiddle = true;
   Twiddle *pTwiddle = nullptr;
   if (use_twiddle)
-    pTwiddle = new Twiddle(0.2, 500);
+    pTwiddle = new Twiddle(0.002, 2000, steering_Kp, steering_Ki, steering_Kd);
 
   h.onMessage([&steering_pid, &speed_pid, set_speed, pTwiddle, use_twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.

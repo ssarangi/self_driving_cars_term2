@@ -18,19 +18,19 @@ enum TWIDDLE_STEP {
 
 class Twiddle {
 public:
-    Twiddle(double tol, int num_iterations) {
+    Twiddle(double tol, int num_iterations, double Kp, double Ki, double Kd) {
       int num_params = 3;  /// For now hardcode it to 3 since we need to update PID controller
       m_tolerance = tol;
       m_bestErr = 0.0;
-      m_p = std::vector<double>(num_params, 0);
-      m_dp = std::vector<double>(num_params, 1);
+      m_p = {Kp, Kd, Ki};
+      m_dp = {(Kp / Kd) * Kp, Kd, (Ki / Kd) * Ki};
       m_isTwiddleActive = true;
       m_twiddleStep = TWIDDLE_STEP::INITIALIZE_TWIDDLE;
       m_currentParameterBeingTuned = 0;
       m_pPID = new PID();
       m_bestErr = std::numeric_limits<double>::max();
       m_numIterations = num_iterations;
-      m_currentIteration = -800;
+      m_currentIteration = -40;
       m_error = 0.0;
     }
 

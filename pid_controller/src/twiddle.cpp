@@ -8,10 +8,9 @@ using json = nlohmann::json;
 
 double Twiddle::sum_dp() {
   double sum = 0.0;
-//  for (double d : m_dp) {
-//    sum += d;
-//  }
-  sum = m_dp[0];
+  for (double d : m_dp) {
+    sum += d;
+  }
   return sum;
 }
 
@@ -112,8 +111,8 @@ TWIDDLE_STEP Twiddle::step(double err) {
     if (avgError < m_bestErr) {
       m_bestErr = avgError;
       m_dp[m_currentParameterBeingTuned] *= 1.1;
-      // m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
-      m_currentParameterBeingTuned = 0;
+      m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
+      // m_currentParameterBeingTuned = 0;
       m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
       return TWIDDLE_STEP::START_TWIDDLE;
     } else {
@@ -133,8 +132,8 @@ TWIDDLE_STEP Twiddle::step(double err) {
       m_dp[m_currentParameterBeingTuned] *= 0.9;
     }
 
-    // m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
-    m_currentParameterBeingTuned = 0;
+    m_currentParameterBeingTuned = (m_currentParameterBeingTuned + 1) % 3;
+    // m_currentParameterBeingTuned = 0;
     m_twiddleStep = TWIDDLE_STEP::START_TWIDDLE;
     m_currentIteration = 0;
   }
