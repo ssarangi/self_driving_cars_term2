@@ -37,13 +37,17 @@ std::vector<double> Twiddle::getP() {
   return m_p;
 }
 
-void Twiddle::updatePID() {
+void Twiddle::updatePID(double error) {
   m_pPID->Kp = m_p[0];
-  m_pPID->Kd = 4.0; // m_p[1];
-  m_pPID->Ki = 0.0001; // m_p[2];
+  m_pPID->Kd = m_p[1];
+  m_pPID->Ki = m_p[2];
   m_pPID->p_error = 0.0;
   m_pPID->d_error = 0.0;
   m_pPID->i_error = 0.0;
+
+  std::cout << m_name << " PID: (" << m_pPID->Kp << ", " << m_pPID->Ki << ", " << m_pPID->Kd << ")" << std::endl;
+  std::cout << m_name << " DP: (" << m_dp[0] << ", " << m_dp[2] << ", " << m_dp[1] << ")" << std::endl;
+  m_csvFile << m_pPID->Kp << ", " << m_pPID->Ki << ", " << m_pPID->Kd << ", " << error << std::endl;
 }
 
 /*
@@ -88,7 +92,9 @@ TWIDDLE_STEP Twiddle::step(double err) {
   }
 
   double avgError = m_error / m_numIterations;
+  std::string param_names[] = {"Kp", "Kd", "Ki"};
   std::cout << "Average Error: " << avgError << std::endl;
+  std::cout << "Updating " << param_names[m_currentParameterBeingTuned] << std::endl;
   m_error = 0.0;
 
   if (m_twiddleStep == TWIDDLE_STEP::INITIALIZE_TWIDDLE) {
@@ -103,7 +109,7 @@ TWIDDLE_STEP Twiddle::step(double err) {
 
   if (m_twiddleStep == TWIDDLE_STEP::START_TWIDDLE) {
     m_p[m_currentParameterBeingTuned] += m_dp[m_currentParameterBeingTuned];
-    updatePID();
+    updatePID(avgError);
     m_twiddleStep = TWIDDLE_STEP::FIRST_IF_STEP;
     m_currentIteration = 0;
     return m_twiddleStep;
@@ -117,7 +123,7 @@ TWIDDLE_STEP Twiddle::step(double err) {
       return TWIDDLE_STEP::START_TWIDDLE;
     } else {
       m_p[m_currentParameterBeingTuned] -= 2 * m_dp[m_currentParameterBeingTuned];
-      updatePID();
+      updatePID(avgError);
       m_twiddleStep = TWIDDLE_STEP::AFTER_RESET_SIMULATOR;
       m_currentIteration = 0;
       return TWIDDLE_STEP::RESET_SIMULATOR;
@@ -128,7 +134,7 @@ TWIDDLE_STEP Twiddle::step(double err) {
       m_dp[m_currentParameterBeingTuned] *= 1.05;
     } else {
       m_p[m_currentParameterBeingTuned] += m_dp[m_currentParameterBeingTuned];
-      updatePID();
+      updatePID(avgError);
       m_dp[m_currentParameterBeingTuned] *= 0.9;
     }
 

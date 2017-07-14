@@ -42,31 +42,56 @@ int main()
 
   PID steering_pid;
   double steering_Kp, steering_Ki, steering_Kd;
+  // Hand Tuned Parameters
 //  steering_Kp = 0.1;
 //  steering_Ki = 0.0001;
 //  steering_Kd = 4.0;
-  steering_Kd = 6.0;
-  steering_Kp = 0.01 * steering_Kd;
-  steering_Ki = 0.1 * steering_Kp;
+  // Twiddle Based Initial parameters
+  /*
+   * Steering PID: (0.098, 0.00100017, 20.5)
+   * Steering DP: (3.83208e-05, 4.46062e-09, 0.122667)
+   * 42["steer",{"steering_angle":-1.0,"throttle":0.3}]
+   * CTE: 0.7687 Steering Value: -1
+   */
 
-  PID speed_pid;
+  PID throttle_pid;
   double speed_Kp, speed_Ki, speed_Kd;
-  speed_Kp = 10.0;
-  speed_Ki = 10.0;
-  speed_Kd = 10.0;
+  speed_Kd = 5.0;
+  speed_Kp = 0.01 * speed_Kd;
+  speed_Ki = 0.01 * speed_Kp;
 
-  double set_speed = 50; // 50 mph
+  double set_speed = 100; // 50 mph
 
   // TODO: Initialize the pid variable.
-  steering_pid.Init(steering_Kp, steering_Ki, steering_Kd);
-  speed_pid.Init(speed_Kp, speed_Ki, speed_Kd);
+  throttle_pid.Init(speed_Kp, speed_Ki, speed_Kd);
 
-  bool use_twiddle = true;
-  Twiddle *pTwiddle = nullptr;
-  if (use_twiddle)
-    pTwiddle = new Twiddle(0.002, 2000, steering_Kp, steering_Ki, steering_Kd);
+  bool use_steering_twiddle = false;
+  bool use_throttle_twiddle = false;
+  Twiddle *pSteeringTwiddle = nullptr;
+  Twiddle *pThrottleTwiddle = nullptr;
+  if (use_steering_twiddle) {
+    steering_Kd = 10.0;
+    steering_Kp = 0.01 * steering_Kd;
+    steering_Ki = 0.01 * steering_Kp;
+    pSteeringTwiddle = new Twiddle("Steering", 0.02, 2500, steering_Kp, steering_Ki, steering_Kd);
+    steering_pid.Init(steering_Kp, steering_Ki, steering_Kd);
+  } else {
+//    steering_Kp = 0.098;
+//    steering_Ki = 0.00100017;
+//    steering_Kd = 20.5;
 
-  h.onMessage([&steering_pid, &speed_pid, set_speed, pTwiddle, use_twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    steering_Kp = 0.1;
+    steering_Ki = 0.0001;
+    steering_Kd = 4.0;
+    steering_pid.Init(steering_Kp, steering_Ki, steering_Kd);
+  }
+
+  if (use_throttle_twiddle) {
+    pThrottleTwiddle = new Twiddle("Throttle", 0.2, 2000, speed_Kp, speed_Ki, speed_Kd);
+  }
+
+  h.onMessage([&steering_pid, &throttle_pid, set_speed, pSteeringTwiddle, pThrottleTwiddle, use_steering_twiddle, use_throttle_twiddle]
+                  (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -82,8 +107,8 @@ int main()
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
-          TWIDDLE_STEP twiddle_step;
-          // std::cout << "CTE: " << cte << std::endl;
+          double throttle_value;
+          TWIDDLE_STEP twiddle_step, throttle_step;
           /*
           * TODO: Calculate steering value here, remember the steering value is
           * [-1, 1].
@@ -91,53 +116,59 @@ int main()
           * another PID controller to control the speed!
           */
           // Run Twiddle. Once Twiddle converges then we can start running the simulator
-          if (use_twiddle && pTwiddle->isActive()) {
+          if (use_steering_twiddle && pSteeringTwiddle->isActive()) {
             // std::cout << "Performing TWIDDLE step" << std::endl;
-            twiddle_step = pTwiddle->step(cte);
-            std::vector<double> dp = pTwiddle->getDP();
-            std::vector<double> p = pTwiddle->getP();
-
-            if (twiddle_step != TWIDDLE_STEP::ACCUMULATE_ERROR) {
-              std::cout << "P: ";
-              std::copy(p.begin(), p.end(), std::ostream_iterator<double>(std::cout, ", "));
-              std::cout << std::endl;
-
-              std::cout << "DP: ";
-              std::copy(dp.begin(), dp.end(), std::ostream_iterator<double>(std::cout, ", "));
-              std::cout << std::endl;
-            }
+            twiddle_step = pSteeringTwiddle->step(cte);
 
             if (twiddle_step == TWIDDLE_STEP::RESET_SIMULATOR) {
               reset_simulator(ws);
-              twiddle_step = pTwiddle->step(cte);
-              if (twiddle_step == TWIDDLE_STEP::ACCUMULATE_ERROR) {
-                std::vector<double> _dp = pTwiddle->getDP();
-                std::vector<double> _p = pTwiddle->getP();
-                std::cout << "P: ";
-                std::copy(_p.begin(), _p.end(), std::ostream_iterator<double>(std::cout, ", "));
-                std::cout << std::endl;
-
-                std::cout << "DP: ";
-                std::copy(_dp.begin(), _dp.end(), std::ostream_iterator<double>(std::cout, ", "));
-                std::cout << std::endl;
-              }
+              twiddle_step = pSteeringTwiddle->step(cte);
             }
 
             // Get the PID and use that
-            PID *pPID = pTwiddle->getPID();
+            PID *pPID = pSteeringTwiddle->getPID();
             pPID->UpdateError(cte);
             steer_value = pPID->TotalError();
-            if (!pTwiddle->isActive()) {
+            if (!pSteeringTwiddle->isActive()) {
               steering_pid = *pPID;
             }
           } else {
             // Steering PID
             steering_pid.UpdateError(cte);
             steer_value = steering_pid.TotalError();
+            std::cout << "Steering PID: " << steering_pid.Kp << ", " << steering_pid.Ki << ", " << steering_pid.Kd << ")" << std::endl;
             std::cout << "Average Error: " << cte << std::endl;
           }
 
           steer_value = std::max(std::min(1.0, steer_value), -1.0);
+
+          if (use_throttle_twiddle && pThrottleTwiddle->isActive()) {
+            throttle_step = pThrottleTwiddle->step(fabs(cte));
+
+            if (throttle_step == TWIDDLE_STEP::RESET_SIMULATOR) {
+              reset_simulator(ws);
+              throttle_step = pThrottleTwiddle->step(fabs(cte));
+            }
+
+            // Get the PID and use that
+            PID *pPID = pThrottleTwiddle->getPID();
+            pPID->UpdateError(fabs(cte));
+            throttle_value = fabs(pPID->TotalError());
+            if (!pThrottleTwiddle->isActive()) {
+              throttle_pid = *pPID;
+            }
+          } else {
+            // Steering PID
+            throttle_pid.UpdateError(fabs(cte));
+            throttle_value = fabs(throttle_pid.TotalError());
+            std::cout << "Throttle PID: " << throttle_pid.Kp << ", " << throttle_pid.Ki << ", " << throttle_pid.Kd << ")" << std::endl;
+            std::cout << "Average Error: " << cte << std::endl;
+          }
+
+          throttle_value = std::max(std::min(1.0, throttle_value), 0.0);
+          if (!use_throttle_twiddle) {
+            throttle_value = 0.3;
+          }
 
 //          // Speed PID
 //          double speed_error = set_speed - speed;
@@ -147,12 +178,12 @@ int main()
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
           // DEBUG
-          if (use_twiddle && pTwiddle->isActive() && twiddle_step != TWIDDLE_STEP::ACCUMULATE_ERROR) {
+          if (use_steering_twiddle && pSteeringTwiddle->isActive() && twiddle_step != TWIDDLE_STEP::ACCUMULATE_ERROR) {
             std::cout << msg << std::endl;
             std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
           }
@@ -201,6 +232,6 @@ int main()
   }
   h.run();
 
-  if (use_twiddle)
-    delete pTwiddle;
+  if (use_steering_twiddle)
+    delete pSteeringTwiddle;
 }
