@@ -8,6 +8,8 @@
 #include <random>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
+#include <iterator>
 
 #include "particle_filter.h"
 
