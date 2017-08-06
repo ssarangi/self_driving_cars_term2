@@ -3,6 +3,103 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## Model
+
+Global kinematic model was used in this model predictive controller.
+
+The state consists of X position, Y position, psi angle, v speed, Cross track error (distance between vehicle and it's trajectory) and Error in PSI (difference between the vehicle angle and the trajectory angle).
+
+The actuators for the model are delta (for steering angle) and acceleration, which is the output of the model after solving it given the model constraints which are described below.
+
+The number of time steps in the future are determined by N (value of 15) and T (1) where dt is 1 in this case.
+The values of N and T were picked by trial and error, with the following guidelines:
+ - If the model is trying to predict too long time in the future, it takes a while to compute and all of them are being then thrown away
+ - If the model is trying to predict too short in the future, then it doesn't have any basis of what will happen after the next step which leads to bad prediction and the car usually ends up driving off track
+
+A value in the middle is the best to avoid too much computation and being short sighted which was adjusted with trial and error.
+
+In order to account for the 100ms delay, this_thread::sleep_for(chrono::milliseconds(100)); was added before sending the steer and acceleration to the simulator.
+In the model predictive controller, the x position sent to the state is advanced by 100 ms by doing: future_x = v * dt (where dt is 0.1) in order to account for this.
+
+## Code Structure
+
+Main does the following:
+
+1. As the simulator is running, it gets a 'telemetry' event which has the following information:
+
+  a. (ptsx, ptsy) which are the map coordinates
+  b. (px, py) which are the vehicle coordinates
+  c. psi which is the angle
+  d. psi_unity
+  e. v which is the speed
+
+2. Create ptsxv and ptsyv which are the map coordinates
+3. Convert them into vehicle space coordinates by doing the following calculation:
+
+  a. x = ptsxv - px
+  b. y = ptsyv - py
+  c. new_x_coordinate = x * cos(psi) + y * sin(psi)
+  d. new_y_coordinate = -x * sin(psi) + y * cos(psi)
+
+4. Fit ptsxv and ptsyv into 3rd degree polynomial and get the coefficients.
+5. Get cross track error by evaluating the polynomial with the coefficients from the previous step and at x = 0 and multiply it be -1.
+6. Calculate psi error (epsi) by evaluating atan(coefficients[1]) and multiplying it by -1.
+7. Create the current state from (px, py, psi, v, cte, epsi)
+8. Solve given the current state and the constraints (handled by the MPC module)
+9. Get the steer value and the throttle value
+10. Display the MPC predicted trajectory and the reference points
+
+MPC module does the following:
+
+1. Get the current state from the input (x, y, psi, v, cte, epsi)
+2. Define the number of constraints to be 6
+3. Set the upper bound and lower bound for:
+
+    a. all variables (big negative number, big positive number)
+    b. delta to be [-25 degrees to 25 degrees]
+    c. accelerator to be [-1 to 1]
+
+4. Compute the solution from the constraints using the following:
+
+    a. Define the cost to accumulate the following:
+
+        1. power(velocity difference to reference velocity of 50, 2) => Will keep velocity close to 0
+        2. power(cte difference to reference cte of 0, 2) => Will keep CTE close to 0
+        3. 2 * power(epsi difference to reference epsi of 0, 2) => Will keep EPSI close to 0
+        4. power(delta, 2)
+        5. power(acceleration, 2)
+        6. 200 * power(delta difference, 2) => Will make changes in delta happen more slowly and smoothly
+        7. 10 * power(acceleration difference, 2) => Will make changes in acceleration happen more slowly and smoothly
+        8. power(psi difference, 2) => This will make changes in psi happen more slowly and smoothly
+        9. power(cte difference, 2) => This will make changes in cte happen more slowly to avoid having the car jerk around
+
+    b. Copy over the state for the next N times
+    c. Create all the constraints of the following:
+
+        1. X constraint: x1 - (x0 + v0 * cos(psi0) * dt)
+        2. Y constraint: y1 - (y0 + v0 * sin(psi0) * dt)
+        3. PSI Constraint: psi1 - (psi0 + v0 * delta0 / Lf * dt)
+        4. V Constraint: v1 - (v0 + a0 * dt)
+        5. CTE Constraint: cte1 - ((f0 - y0) + (v0 * sin(epsi0) * dt))
+        6. EPSI Constraint: epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt)
+
+        where f0 = coeffs[0] + (coeffs[1] * x0) + (coeffs[2] * pow(x0,2)) + (coeffs[3] * pow(x0,3))
+        and psides0 = atan(coeffs[1] + (2 * coeffs[2] * x0) + (3 * coeffs[3]* pow(x0,2) ))
+
+
+5. Get the delta and acceleration from the solution
+
+## Simulation
+
+The following shows simulation using this Model Predictive Controller.
+The green line represents the predicted path while the yellow line represents the ground truth.
+
+[![Simulation using MPC](https://img.youtube.com/vi/NxKmWrKG7eY/0.jpg)](https://youtu.be/NxKmWrKG7eY)
+
+## Credit
+
+Tips have been followed from https://github.com/hortovanyi/CarND-MPC-Project
+
 ## Dependencies
 
 * cmake >= 3.5
