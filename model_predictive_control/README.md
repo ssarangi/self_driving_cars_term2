@@ -94,8 +94,6 @@ MPC module does the following:
 The following shows simulation using this Model Predictive Controller.
 The green line represents the predicted path while the yellow line represents the ground truth.
 
-[![Simulation using MPC](https://img.youtube.com/vi/NxKmWrKG7eY/0.jpg)](https://youtu.be/NxKmWrKG7eY)
-
 ## Credit
 
 Tips have been followed from https://github.com/hortovanyi/CarND-MPC-Project

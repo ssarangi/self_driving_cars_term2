@@ -91,6 +91,7 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          double steer_value = j[1]["steering_angle"];
 
           /*
           * TODO: Calculate steeering angle and throttle using MPC.
@@ -124,13 +125,15 @@ int main() {
           double future_y = 0;
           double future_psi = -v * psi / Lf * dt;
           double future_v = v + v * dt;
+          double future_cte = cte + v * sin(epsi) * dt;
+          double future_epsi = epsi - v * steer_value / Lf * dt;
 
 //          state << px, py, psi, v, cte, epsi;
 //          state << vx, vy, vpsi, v, cte, psi;
-          state << future_x, future_y, vpsi, v, cte, psi;
+          state << future_x, future_y, vpsi, v, future_cte, future_epsi;
           std::vector<double> x1 = mpc.Solve(state, coeffs);
 
-          double steer_value = x1[0];
+          steer_value = x1[0];
           double throttle_value = x1[1];
 
           double N = x1[2];
